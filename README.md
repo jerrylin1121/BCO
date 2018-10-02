@@ -70,17 +70,17 @@ Later you have to implement following function which is related to your model or
 
 1. implement your model.
 
-   [build_policy_model](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#69) builds your own policy model
+   [build_policy_model](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#L69) builds your own policy model
 
-   [build_idm_model](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#73) builds your own inverse dynamic model
+   [build_idm_model](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#L73) builds your own inverse dynamic model
 
 2. interact with environment.
 
-   [pre_demonstration](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#90) uniform sample action to generate (s_t, s_t+1) and action pairs
+   [pre_demonstration](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#L90) uniform sample action to generate (s_t, s_t+1) and action pairs
 
-   [post_demonstration](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#94) uses policy to generate (s_t, s_t+1) and action pairs
+   [post_demonstration](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#L94) uses policy to generate (s_t, s_t+1) and action pairs
 
-   [eval_rwd_policy](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#98) gets reward by evaluate the policy function
+   [eval_rwd_policy](https://github.com/jerrylin1121/BCO/tree/master/models/bco.py#L98) gets reward by evaluate the policy function
 
 Implement the above function. See [bco_cartpole.py](https://github.com/jerrylin1121/BCO/tree/master/models/bco_cartpole.py) in [models](https://github.com/jerrylin1121/BCO/tree/master/models) directory for examples.
 
