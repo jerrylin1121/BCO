@@ -1,16 +1,17 @@
 from utils import *
+import time
 import gym
 
 class BCO():
-  def __init__(self, state_shape, action_shape, lr=0.002, maxits=1000, M=1000):
+  def __init__(self, state_shape, action_shape):
     # set initial value
     self.state_dim = state_shape            # state dimension
     self.action_dim = action_shape          # action dimension
-    self.lr = lr                            # model update learning rate
-    self.maxits = maxits                    # maximum iteration
+    self.lr = args.lr                       # model update learning rate
+    self.max_episodes = args.max_episodes   # maximum episode
     self.batch_size = args.batch_size       # batch size
     self.alpha = 0.01                       # alpha = | post_demo | / | pre_demo |
-    self.M = M                              # sample to update inverse dynamic model
+    self.M = args.M                         # sample to update inverse dynamic model
 
     # initial session
     config = tf.ConfigProto()  
@@ -151,9 +152,10 @@ class BCO():
     # pre demonstration to update inverse dynamic model
     S, nS, A = self.pre_demonstration()
     self.update_idm(S, nS, A)
-    for it in range(self.maxits):
+    start = time.time()
+    for i_episode in range(self.max_episodes):
       def should(freq):
-        return freq > 0 and ((it+1) % freq==0 or it == self.maxits-1 )
+        return freq > 0 and ((i_episode+1) % freq==0 or i_episode == self.max_episodes-1 )
 
       # update policy pi
       S, nS = self.sample_demo()
@@ -167,17 +169,19 @@ class BCO():
       idm_loss = self.get_idm_loss(S, nS, A)
 
       if should(args.print_freq):
-        print('iteration: %5d, total reward: %5.1f, policy loss: %8.6f, idm loss: %8.6f' % ((it+1), self.eval_rwd_policy(), policy_loss, idm_loss))
+        now = time.time()
+        print('Episode: {:5d}, total reward: {:5.1f}, policy loss: {:8.6f}, idm loss: {:8.6f}, time: {:5.3f} sec/episode'.format((i_episode+1), self.eval_rwd_policy(), policy_loss, idm_loss, (now-start)/args.print_freq))
+        start = now
 
       # saving model
       if should(args.save_freq):
-        print('saving model')
-        saver.save(self.sess, args.model_dir)
+        save_path = saver.save(self.sess, args.model_dir)
+        print('saving model: {}'.format(save_path))
 
   def test(self):
     saver = tf.train.Saver()
     saver.restore(self.sess, args.model_dir)
-    print('\n[Testing]\nFinal reward: %5.1f' % self.eval_rwd_policy())
+    print('\n[Testing]\nFinal reward: {:5.1f}'.format(self.eval_rwd_policy()))
 
   def run(self):
     if not os.path.exists(args.model_dir):

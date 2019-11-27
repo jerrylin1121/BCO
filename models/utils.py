@@ -8,7 +8,7 @@ parser.add_argument("--input_filename", default="input/demonstration.txt", help=
 parser.add_argument("--mode", default="train", choices=["train", "test"], required=True)
 parser.add_argument("--model_dir", help="where to save/restore the model")
 
-parser.add_argument("--maxits", type=int, default=1000, help="the number of training iteration")
+parser.add_argument("--max_episodes", type=int, default=1000, help="the number of training episodes")
 parser.add_argument("--M", type=int, default=1000, help="the number of post demonstration examples")
 
 parser.add_argument("--batch_size", type=int, default=32, help="number of examples in batch")

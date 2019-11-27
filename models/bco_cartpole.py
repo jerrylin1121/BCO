@@ -3,8 +3,8 @@ from bco import BCO
 import gym
 
 class BCO_cartpole(BCO):
-  def __init__(self, state_shape, action_shape, lr=0.002, maxits=1000, M=1000):  
-    BCO.__init__(self, state_shape, action_shape, lr=lr, maxits=maxits, M=M)
+  def __init__(self, state_shape, action_shape):
+    BCO.__init__(self, state_shape, action_shape)
 
     # set which game to play
     self.env = gym.make('CartPole-v0')
@@ -26,7 +26,7 @@ class BCO_cartpole(BCO):
         self.policy_pred_action = tf.one_hot(tf.argmax(policy_pred_action, axis=1), self.action_dim, name="one_hot")
 
       with tf.variable_scope("loss") as scope:
-        self.policy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.action, logits=policy_pred_action))
+        self.policy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.action, logits=policy_pred_action))
       with tf.variable_scope("train_step") as scope:
         self.policy_train_step = tf.train.AdamOptimizer(self.lr).minimize(self.policy_loss)
 
@@ -46,7 +46,7 @@ class BCO_cartpole(BCO):
         self.idm_pred_action = tf.one_hot(tf.argmax(idm_pred_action, axis=1), self.action_dim, name="one_hot")
 
       with tf.variable_scope("loss") as scope:
-        self.idm_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.action, logits=idm_pred_action))
+        self.idm_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=self.action, logits=idm_pred_action))
       with tf.variable_scope("train_step") as scope:
         self.idm_train_step = tf.train.AdamOptimizer(self.lr).minimize(self.idm_loss)
 
@@ -119,5 +119,5 @@ class BCO_cartpole(BCO):
     return total_reward
     
 if __name__ == "__main__":
-  bco = BCO_cartpole(4, 2, lr=args.lr, maxits=args.maxits)
+  bco = BCO_cartpole(4, 2)
   bco.run()
