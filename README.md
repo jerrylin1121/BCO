@@ -1,5 +1,11 @@
 # Behavioral Cloning from Observation [[Paper]](https://arxiv.org/abs/1805.01954)
 
+## Update
+
+### 2019/11/28:
+
+1. Implement tensorflow 2.0 version and push to `tf2.0` branch
+
 ## Introduction
 
 This is an implementation of BCO in Tensorflow on [cartpole](https://gym.openai.com/envs/CartPole-v0/) environment.
