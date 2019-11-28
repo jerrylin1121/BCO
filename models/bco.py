@@ -1,3 +1,5 @@
+import tensorflow as tf; tf.keras.backend.set_floatx('float64')
+
 from utils import *
 import time
 import gym
@@ -13,23 +15,9 @@ class BCO():
     self.alpha = 0.01                       # alpha = | post_demo | / | pre_demo |
     self.M = args.M                         # sample to update inverse dynamic model
 
-    # initial session
-    config = tf.ConfigProto()  
-    config.gpu_options.allow_growth=True
-    self.sess = tf.Session(config=config)
-
-    # set the input placeholder
-    with tf.variable_scope("placeholder") as scpoe:
-      self.state = tf.placeholder(tf.float32, [None, self.state_dim], name="state")
-      self.nstate = tf.placeholder(tf.float32, [None, self.state_dim], name="next_state")
-      self.action = tf.placeholder(tf.float32, [None, self.action_dim], name="action")
-    
     # build policy model and inverse dynamic model
     self.build_policy_model()
     self.build_idm_model()
-
-    # tensorboard output
-    writer = tf.summary.FileWriter("logdir/", graph=self.sess.graph)
 
     self.test_time = 100
 
@@ -77,16 +65,11 @@ class BCO():
 
   def eval_policy(self, state):
     """get the action by current state"""
-    return self.sess.run(self.policy_pred_action, feed_dict={
-      self.state: state
-    })
+    return tf.math.argmax( self.policy(state), axis=1 )
 
   def eval_idm(self, state, nstate):
     """get the action by inverse dynamic model from current state and next state"""
-    return self.sess.run(self.idm_pred_action, feed_dict={
-      self.state: state,
-      self.nstate: nstate
-    })
+    return tf.math.argmax( self.idm(state, nstate), axis=1 )
 
   def pre_demonstration(self):
     """uniform sample action to generate (s_t, s_t+1) and action pairs"""
@@ -100,53 +83,52 @@ class BCO():
     """getting the reward by current policy model"""
     raise NotImplementedError
     
+  @tf.function
+  def policy_train_step(self, state, action):
+    """tensorflow 2.0 policy train step"""
+    raise NotImplementedError
+
+  @tf.function
+  def idm_train_step(self, state, nstate, action):
+    """tensorflow 2.0 idm train step"""
+    raise NotImplementedError
+
   def update_policy(self, state, action):
     """update policy model"""
     num = len(state)
     idxs = get_shuffle_idx(num, self.batch_size)
     for idx in idxs:
-      batch_s = [  state[i] for i in idx ]
-      batch_a = [ action[i] for i in idx ]
-      self.sess.run(self.policy_train_step, feed_dict={
-        self.state : batch_s,
-        self.action: batch_a
-      })
+      batch_s = tf.constant([ state[i] for i in idx ])
+      batch_a = tf.gather( action, idx )
+      self.policy_train_step( batch_s, batch_a )
  
   def update_idm(self, state, nstate, action):
     """update inverse dynamic model"""
     num = len(state)
     idxs = get_shuffle_idx(num, self.batch_size)
     for idx in idxs:
-      batch_s  = [  state[i] for i in idx ]
-      batch_ns = [ nstate[i] for i in idx ]
-      batch_a  = [ action[i] for i in idx ]
-      self.sess.run(self.idm_train_step, feed_dict={
-        self.state : batch_s,
-        self.nstate: batch_ns,
-        self.action: batch_a
-      })
+      batch_s  = tf.constant([  state[i] for i in idx ])
+      batch_ns = tf.constant([ nstate[i] for i in idx ])
+      batch_a  = tf.constant([ action[i] for i in idx ])
+      self.idm_train_step( batch_s, batch_ns, batch_a )
 
-  def get_policy_loss(self, state, action):
+  def get_policy_loss(self):
     """get policy model loss"""
-    return self.sess.run(self.policy_loss, feed_dict={
-      self.state: state,
-      self.action: action
-    })
+    loss = self.policy_loss.result()
+    self.policy_loss.reset_states()
+    return loss
 
-  def get_idm_loss(self, state, nstate, action):
+  def get_idm_loss(self):
     """get inverse dynamic model loss"""
-    return self.sess.run(self.idm_loss, feed_dict={
-      self.state: state,
-      self.nstate: nstate,
-      self.action: action
-    })
+    loss = self.idm_loss.result()
+    self.idm_loss.reset_states()
+    return loss
 
   def train(self):
     """training the policy model and inverse dynamic model by behavioral cloning"""
 
-    saver = tf.train.Saver(max_to_keep=1)
-
-    self.sess.run(tf.global_variables_initializer())
+    ckpt = tf.train.Checkpoint(model=self.policy)
+    manager = tf.train.CheckpointManager(ckpt, args.model_dir, max_to_keep=3)
 
     print("\n[Training]")
     # pre demonstration to update inverse dynamic model
@@ -161,12 +143,12 @@ class BCO():
       S, nS = self.sample_demo()
       A = self.eval_idm(S, nS)
       self.update_policy(S, A)
-      policy_loss = self.get_policy_loss(S, A)
+      policy_loss = self.get_policy_loss()
 
       # update inverse dynamic model
       S, nS, A = self.post_demonstration()
       self.update_idm(S, nS, A)
-      idm_loss = self.get_idm_loss(S, nS, A)
+      idm_loss = self.get_idm_loss()
 
       if should(args.print_freq):
         now = time.time()
@@ -175,12 +157,12 @@ class BCO():
 
       # saving model
       if should(args.save_freq):
-        save_path = saver.save(self.sess, args.model_dir)
+        save_path = manager.save()
         print('saving model: {}'.format(save_path))
 
   def test(self):
-    saver = tf.train.Saver()
-    saver.restore(self.sess, args.model_dir)
+    ckpt = tf.train.Checkpoint(model=self.policy)
+    ckpt.restore(tf.train.latest_checkpoint(args.model_dir))
     print('\n[Testing]\nFinal reward: {:5.1f}'.format(self.eval_rwd_policy()))
 
   def run(self):

@@ -1,4 +1,3 @@
-import tensorflow as tf
 import argparse
 import os
 import numpy as np
@@ -18,12 +17,6 @@ parser.add_argument("--save_freq", type=int, default=100, help="save model every
 parser.add_argument("--print_freq", type=int, default=50, help="print current reward and loss every print_freq iterations, 0 to disable")
 
 args = parser.parse_args()
-
-def weight_initializer():
-  return tf.truncated_normal_initializer(stddev=0.1)
-
-def bias_initializer():
-  return tf.constant_initializer(0.01)
 
 def get_shuffle_idx(num, batch_size):
   tmp = np.arange(num)
